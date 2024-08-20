@@ -114,39 +114,34 @@ def server(input, output, session):
     @reactive.event(input.run)
     def _():
 
+        citations = []
+
         # Define the EventHandler
         class EventHandler(AssistantEventHandler):
+
             
             @override
             def on_message_done(self, message) -> None:
-                # show_json(message)
-
-
                 message_content = message.content[0].text
-                
 
-                # print(message_content)
-                # annotations = message_content.annotations
-                # citations = []
-                # for index, annotation in enumerate(annotations):
-                #     message_content.value = message_content.value.replace(
-                #         annotation.text, f"[{index}]"
-                #     )
-                #     if file_citation := getattr(annotation, "file_citation", None):
-                #         cited_file = openai.files.retrieve(file_citation.file_id)
-                #         citations.append(f"[{index}] {cited_file.filename} {citations}")
+                print(message_content)
 
-                @render.text 
-                def assistant(): 
+                # Process annotations
+                annotations = message_content.annotations
+                for index, annotation in enumerate(annotations):
+                    message_content.value = message_content.value.replace(
+                        annotation.text, f"[{index + 1}]"
+                    )
+                    if file_citation := getattr(annotation, "file_citation", None):
+                        cited_file = openai.files.retrieve(file_citation.file_id)
+                        citations.append(f"[{index + 1}] {cited_file.filename}")
 
-                    # citations_text = "\n".join(citations)
-                    # # Combine message content and citations with a newline between them
-                    # mc_string = f"{message_content.value}\n{citations_text}"
-                    # mc_string = str(message_content.value) + "\n".join(citations)
-                    return message_content.value
-                    # return mc_string
-                
-                # print("\n".join(citations))
+                @output
+                @render.text
+                def assistant():
+                    citations_text = "\n".join(citations)
+                    mc_string = f"{message_content.value}\n\nCitations:\n{citations_text}"
+                    return mc_string
 
         with ui.Progress() as p:
             p.set(message = "Generating response from tutorial")
@@ -164,9 +159,9 @@ def server(input, output, session):
             ) as stream:
                 stream.until_done()
 
-        runs = openai.beta.threads.runs.list(
-            thread_id=thread.id
-        )
+        # runs = openai.beta.threads.runs.list(
+        #     thread_id=thread.id
+        # )
         # print(runs)
 
         tokens = stream.get_final_run().usage
